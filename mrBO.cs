@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -370,6 +370,77 @@ namespace MedicalRecordsBusiness
                         sql = $"INSERT INTO REGISTROSTARJETAS VALUES('{userId}','{fe[2]}/{fe[1]}/{fe[0]}','{cols[3]}','{cols[2]}','{cols[4]}','{cols[5]}',{cols[7].Replace(",","")},{cols[8].Replace(",","")},0)";
                         da.ExecuteNonQuery(cs, sql, "sqltext");
 
+                    }
+                }
+            }
+        }
+
+
+        public void Prex(string[] files )
+        {
+            string fecha = "";
+            string detalle = "";
+            string valor = "";
+            int moneda = 0;
+            string debito = "";
+            string credito = "";
+            string sql = "";
+            foreach(string f in files)
+            {
+                if ( File.Exists(f))
+                {
+                    string[] lines = File.ReadAllLines(f);
+                    foreach (string l in lines)
+                    {
+                        if (l.Contains("Movimientos en ") ||
+                            l.Contains("Fecha	Descripción	Importe	Estado	 "))
+                            continue;
+
+                        string[] cols = l.Split('\t');
+                        if (cols.Length > 1)
+                        {
+                            string[] dt = cols[0].Split('/');
+                            if (dt.Length > 2)
+                            {
+                                fecha = $"{dt[2]}/{dt[1]}/{dt[0]}";
+                            }
+                            else fecha = "2017/01/01";
+                            detalle = cols[1].Replace("'","");
+                            valor = cols[2];
+                            valor = valor.Replace(".", "").Replace(",",".");
+                            if (valor.Contains("U$S"))
+                            {
+                                moneda = 1;
+                                valor = valor.Replace("U$S", "").Trim();
+                            }
+                            else
+                            {
+                                valor = valor.Replace("$", "").Trim();
+                                moneda = 0;
+                            }
+                            valor = valor.Replace(",", ".");
+                            if (valor.Contains("-"))
+                            {
+                                valor = valor.Replace("-", "");
+                                debito = valor;
+                                credito = "0";
+                            }
+                            else
+                            {
+                                debito = "0";
+                                credito = valor;
+                            }
+                            sql = $"'PREX','{fecha}','{detalle}',{debito},{credito},{moneda}";
+                            sql = $"insert into registrostarjetas(cardholder, fecha, detalle, debito, credito, moneda)values({sql})";
+                            try
+                            {
+                                da.ExecuteNonQuery(cs, sql, "sqltext");
+                            }
+                            catch (Exception ex)
+                            {
+                                string s = ex.Message;
+                            }
+                        }
                     }
                 }
             }
